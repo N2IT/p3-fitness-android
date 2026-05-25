@@ -36,16 +36,16 @@ class RoutineImporter(private val apiKeyManager: ApiKeyManager) {
         .build()
 
     fun importFromUrl(url: String, onResult: (ImportState) -> Unit) {
-        val apiKey = apiKeyManager.getApiKey()
+        val provider = apiKeyManager.getSelectedProvider()
+        val apiKey = apiKeyManager.getApiKey(provider)
         if (apiKey.isNullOrBlank()) {
-            onResult(ImportState.Error("No API key configured. Add your Claude API key in Settings."))
+            onResult(ImportState.Error("No API key configured for ${provider.displayName}. Add your key in Settings."))
             return
         }
 
         onResult(ImportState.Loading)
 
         try {
-            // Fetch the URL content
             val pageRequest = Request.Builder().url(url).build()
             val pageResponse = client.newCall(pageRequest).execute()
             val html = pageResponse.body?.string() ?: ""
@@ -55,7 +55,6 @@ class RoutineImporter(private val apiKeyManager: ApiKeyManager) {
                 return
             }
 
-            // Strip to just text content (rough extraction)
             val textContent = html
                 .replace(Regex("<script[^>]*>[\\s\\S]*?</script>"), "")
                 .replace(Regex("<style[^>]*>[\\s\\S]*?</style>"), "")
@@ -63,7 +62,7 @@ class RoutineImporter(private val apiKeyManager: ApiKeyManager) {
                 .replace(Regex("\\s+"), " ")
                 .take(8000)
 
-            val routine = callClaudeApi(apiKey, buildUrlPrompt(textContent))
+            val routine = callLlmApi(provider, apiKey, buildUrlPrompt(textContent))
             if (routine != null) {
                 onResult(ImportState.Preview(routine))
             } else {
@@ -75,9 +74,10 @@ class RoutineImporter(private val apiKeyManager: ApiKeyManager) {
     }
 
     fun importFromText(text: String, onResult: (ImportState) -> Unit) {
-        val apiKey = apiKeyManager.getApiKey()
+        val provider = apiKeyManager.getSelectedProvider()
+        val apiKey = apiKeyManager.getApiKey(provider)
         if (apiKey.isNullOrBlank()) {
-            onResult(ImportState.Error("No API key configured. Add your Claude API key in Settings."))
+            onResult(ImportState.Error("No API key configured for ${provider.displayName}. Add your key in Settings."))
             return
         }
 
@@ -89,7 +89,7 @@ class RoutineImporter(private val apiKeyManager: ApiKeyManager) {
         onResult(ImportState.Loading)
 
         try {
-            val routine = callClaudeApi(apiKey, buildTextPrompt(text))
+            val routine = callLlmApi(provider, apiKey, buildTextPrompt(text))
             if (routine != null) {
                 onResult(ImportState.Preview(routine))
             } else {
@@ -100,9 +100,19 @@ class RoutineImporter(private val apiKeyManager: ApiKeyManager) {
         }
     }
 
-    private fun callClaudeApi(apiKey: String, userMessage: String): ImportedRoutine? {
+    private fun callLlmApi(provider: LlmProvider, apiKey: String, userMessage: String): ImportedRoutine? {
+        return when (provider) {
+            LlmProvider.ANTHROPIC -> callAnthropicApi(apiKey, userMessage)
+            LlmProvider.OPENAI -> callOpenAiApi(apiKey, userMessage)
+            LlmProvider.GOOGLE -> callGoogleApi(apiKey, userMessage)
+        }
+    }
+
+    // ── Anthropic Claude ──
+
+    private fun callAnthropicApi(apiKey: String, userMessage: String): ImportedRoutine? {
         val requestBody = JSONObject().apply {
-            put("model", "claude-haiku-4-5-20251001")
+            put("model", LlmProvider.ANTHROPIC.model)
             put("max_tokens", 2048)
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
@@ -113,7 +123,7 @@ class RoutineImporter(private val apiKeyManager: ApiKeyManager) {
         }
 
         val request = Request.Builder()
-            .url("https://api.anthropic.com/v1/messages")
+            .url(LlmProvider.ANTHROPIC.apiEndpoint)
             .addHeader("x-api-key", apiKey)
             .addHeader("anthropic-version", "2023-06-01")
             .addHeader("content-type", "application/json")
@@ -139,8 +149,96 @@ class RoutineImporter(private val apiKeyManager: ApiKeyManager) {
         return parseRoutineJson(textBlock)
     }
 
+    // ── OpenAI ──
+
+    private fun callOpenAiApi(apiKey: String, userMessage: String): ImportedRoutine? {
+        val requestBody = JSONObject().apply {
+            put("model", LlmProvider.OPENAI.model)
+            put("max_tokens", 2048)
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userMessage)
+                })
+            })
+        }
+
+        val request = Request.Builder()
+            .url(LlmProvider.OPENAI.apiEndpoint)
+            .addHeader("Authorization", "Bearer $apiKey")
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        val response = client.newCall(request).execute()
+        val responseBody = response.body?.string() ?: return null
+
+        if (!response.isSuccessful) {
+            val errorJson = try { JSONObject(responseBody) } catch (_: Exception) { null }
+            val errorMsg = errorJson?.optJSONObject("error")?.optString("message") ?: "API error: ${response.code}"
+            throw Exception(errorMsg)
+        }
+
+        val json = JSONObject(responseBody)
+        val choices = json.getJSONArray("choices")
+        if (choices.length() == 0) return null
+        val text = choices.getJSONObject(0)
+            .getJSONObject("message")
+            .getString("content")
+
+        return parseRoutineJson(text)
+    }
+
+    // ── Google Gemini ──
+
+    private fun callGoogleApi(apiKey: String, userMessage: String): ImportedRoutine? {
+        val requestBody = JSONObject().apply {
+            put("contents", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("parts", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("text", userMessage)
+                        })
+                    })
+                })
+            })
+            put("generationConfig", JSONObject().apply {
+                put("maxOutputTokens", 2048)
+            })
+        }
+
+        val url = "${LlmProvider.GOOGLE.apiEndpoint}?key=$apiKey"
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        val response = client.newCall(request).execute()
+        val responseBody = response.body?.string() ?: return null
+
+        if (!response.isSuccessful) {
+            val errorJson = try { JSONObject(responseBody) } catch (_: Exception) { null }
+            val errorMsg = errorJson?.optJSONObject("error")?.optString("message") ?: "API error: ${response.code}"
+            throw Exception(errorMsg)
+        }
+
+        val json = JSONObject(responseBody)
+        val candidates = json.getJSONArray("candidates")
+        if (candidates.length() == 0) return null
+        val text = candidates.getJSONObject(0)
+            .getJSONObject("content")
+            .getJSONArray("parts")
+            .getJSONObject(0)
+            .getString("text")
+
+        return parseRoutineJson(text)
+    }
+
+    // ── Shared parsing ──
+
     private fun parseRoutineJson(text: String): ImportedRoutine? {
-        // Extract JSON from the response (may be wrapped in markdown code blocks)
         val jsonStr = Regex("\\{[\\s\\S]*\\}").find(text)?.value ?: return null
 
         return try {

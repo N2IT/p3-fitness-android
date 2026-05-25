@@ -18,19 +18,44 @@ class ApiKeyManager(context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    fun getApiKey(): String? = prefs.getString(KEY_API_KEY, null)
-
-    fun setApiKey(key: String) {
-        prefs.edit().putString(KEY_API_KEY, key).apply()
+    // Selected provider
+    fun getSelectedProvider(): LlmProvider {
+        val name = prefs.getString(KEY_SELECTED_PROVIDER, null)
+        return try {
+            name?.let { LlmProvider.valueOf(it) } ?: LlmProvider.ANTHROPIC
+        } catch (_: Exception) {
+            LlmProvider.ANTHROPIC
+        }
     }
 
-    fun clearApiKey() {
-        prefs.edit().remove(KEY_API_KEY).apply()
+    fun setSelectedProvider(provider: LlmProvider) {
+        prefs.edit().putString(KEY_SELECTED_PROVIDER, provider.name).apply()
     }
 
-    fun hasApiKey(): Boolean = !getApiKey().isNullOrBlank()
+    // Per-provider API keys
+    fun getApiKey(provider: LlmProvider = getSelectedProvider()): String? =
+        prefs.getString(keyFor(provider), null)
+
+    fun setApiKey(key: String, provider: LlmProvider = getSelectedProvider()) {
+        prefs.edit().putString(keyFor(provider), key).apply()
+    }
+
+    fun clearApiKey(provider: LlmProvider = getSelectedProvider()) {
+        prefs.edit().remove(keyFor(provider)).apply()
+    }
+
+    fun hasApiKey(provider: LlmProvider = getSelectedProvider()): Boolean =
+        !getApiKey(provider).isNullOrBlank()
+
+    fun hasAnyApiKey(): Boolean =
+        LlmProvider.entries.any { hasApiKey(it) }
+
+    fun getConfiguredProviders(): List<LlmProvider> =
+        LlmProvider.entries.filter { hasApiKey(it) }
+
+    private fun keyFor(provider: LlmProvider): String = "api_key_${provider.name}"
 
     companion object {
-        private const val KEY_API_KEY = "claude_api_key"
+        private const val KEY_SELECTED_PROVIDER = "selected_provider"
     }
 }

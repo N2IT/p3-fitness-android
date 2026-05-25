@@ -89,9 +89,9 @@ fun ImportRoutineScreen(
                     }
                 }
 
-                // API key warning
-                if (!uiState.hasApiKey) {
-                    item {
+                // Provider indicator
+                item {
+                    if (!uiState.hasApiKey) {
                         FitTrackCard {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Warning, "Warning", tint = WarningYellow, modifier = Modifier.size(24.dp))
@@ -99,7 +99,7 @@ fun ImportRoutineScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("API Key Required", style = MaterialTheme.typography.titleSmall, color = TextPrimary)
                                     Text(
-                                        "Add your Claude API key in Settings to use AI features",
+                                        "Add an API key for any supported AI provider in Settings",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextSecondary
                                     )
@@ -107,6 +107,25 @@ fun ImportRoutineScreen(
                                 TextButton(onClick = onNavigateToSettings) {
                                     Text("Settings", color = ElectricBlue)
                                 }
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AutoAwesome, "AI", tint = AccentOrange, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "Using ${uiState.providerName}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = TextSecondary
+                                )
+                            }
+                            TextButton(onClick = onNavigateToSettings) {
+                                Text("Change", color = ElectricBlue, style = MaterialTheme.typography.labelMedium)
                             }
                         }
                     }

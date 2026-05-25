@@ -9,6 +9,7 @@ import com.fittrack.FitTrackApplication
 import com.fittrack.data.api.ApiKeyManager
 import com.fittrack.data.api.ImportState
 import com.fittrack.data.api.ImportedRoutine
+import com.fittrack.data.api.LlmProvider
 import com.fittrack.data.api.RoutineImporter
 import com.fittrack.data.entity.Exercise
 import com.fittrack.data.entity.RoutineExercise
@@ -26,7 +27,8 @@ data class ImportUiState(
     val textInput: String = "",
     val importState: ImportState = ImportState.Idle,
     val editedRoutineName: String = "",
-    val hasApiKey: Boolean = false
+    val hasApiKey: Boolean = false,
+    val providerName: String = ""
 )
 
 enum class ImportMode { URL, TEXT }
@@ -42,7 +44,10 @@ class ImportViewModel(
     private val apiKeyManager = ApiKeyManager(application)
     private val importer = RoutineImporter(apiKeyManager)
 
-    private val _uiState = MutableStateFlow(ImportUiState(hasApiKey = apiKeyManager.hasApiKey()))
+    private val _uiState = MutableStateFlow(ImportUiState(
+        hasApiKey = apiKeyManager.hasAnyApiKey(),
+        providerName = apiKeyManager.getSelectedProvider().displayName
+    ))
     val uiState: StateFlow<ImportUiState> = _uiState.asStateFlow()
 
     fun setMode(mode: ImportMode) {
@@ -121,7 +126,10 @@ class ImportViewModel(
     }
 
     fun resetState() {
-        _uiState.value = ImportUiState(hasApiKey = apiKeyManager.hasApiKey())
+        _uiState.value = ImportUiState(
+            hasApiKey = apiKeyManager.hasAnyApiKey(),
+            providerName = apiKeyManager.getSelectedProvider().displayName
+        )
     }
 
     class Factory(

@@ -351,6 +351,7 @@ fun FitTrackApp() {
                 SettingsScreen(
                     uiState = uiState,
                     onToggleUnit = vm::toggleUnit,
+                    onSelectProvider = vm::selectProvider,
                     onApiKeyChanged = vm::updateApiKey,
                     onSaveApiKey = vm::saveApiKey,
                     onClearApiKey = vm::clearApiKey,
