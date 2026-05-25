@@ -9,6 +9,15 @@ android {
     namespace = "com.fittrack"
     compileSdk = 35
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("debug-keystore.jks")
+            storePassword = "android"
+            keyAlias = "debug"
+            keyPassword = "android"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.fittrack"
         minSdk = 26
