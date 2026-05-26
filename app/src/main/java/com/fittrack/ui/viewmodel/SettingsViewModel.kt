@@ -108,6 +108,10 @@ class SettingsViewModel(
         )
     }
 
+    fun logout() {
+        (getApplication<FitTrackApplication>()).sessionManager.clearSession()
+    }
+
     fun exportData() {
         viewModelScope.launch(Dispatchers.IO) {
             try {

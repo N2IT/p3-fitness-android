@@ -64,7 +64,10 @@ val bottomNavRoutes = setOf(
 @Composable
 fun FitTrackApp() {
     val navController = rememberNavController()
-    var currentUserId by remember { mutableIntStateOf(-1) }
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
+    val savedUserId = remember { app.sessionManager.getUserId() }
+    var currentUserId by rememberSaveable { mutableIntStateOf(savedUserId) }
+    val startDestination = if (savedUserId != -1) NavRoutes.ROUTINE_LIST else NavRoutes.LOGIN
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -116,7 +119,7 @@ fun FitTrackApp() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = NavRoutes.LOGIN,
+            startDestination = startDestination,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -357,7 +360,14 @@ fun FitTrackApp() {
                     onClearApiKey = vm::clearApiKey,
                     onExportData = vm::exportData,
                     onNavigateToAchievements = { navController.navigate(NavRoutes.ACHIEVEMENTS) },
-                    onNavigateToBodyWeight = { navController.navigate(NavRoutes.BODY_WEIGHT) }
+                    onNavigateToBodyWeight = { navController.navigate(NavRoutes.BODY_WEIGHT) },
+                    onLogout = {
+                        vm.logout()
+                        currentUserId = -1
+                        navController.navigate(NavRoutes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
 
