@@ -17,6 +17,7 @@ data class RoutineListUiState(
     val routines: List<WorkoutRoutine> = emptyList(),
     val routineExerciseCounts: Map<Int, Int> = emptyMap(),
     val routineExerciseNames: Map<Int, List<String>> = emptyMap(),
+    val routineEstimatedMinutes: Map<Int, Int> = emptyMap(),
     val isLoading: Boolean = true
 )
 
@@ -61,21 +62,31 @@ class RoutineViewModel(application: Application, private val userId: Int) : Andr
             routineDao.getRoutinesForUser(userId).collect { routines ->
                 val counts = mutableMapOf<Int, Int>()
                 val names = mutableMapOf<Int, List<String>>()
+                val estimatedMinutes = mutableMapOf<Int, Int>()
                 routines.forEach { routine ->
                     val exercises = routineExerciseDao.getExercisesForRoutineOnce(routine.id)
                     counts[routine.id] = exercises.size
                     names[routine.id] = exercises.take(3).mapNotNull { re ->
                         exerciseDao.getExerciseById(re.exerciseId)?.name
                     }
+                    val totalSets = exercises.sumOf { it.defaultSets }
+                    estimatedMinutes[routine.id] = estimateWorkoutMinutes(totalSets)
                 }
                 _listState.value = RoutineListUiState(
                     routines = routines,
                     routineExerciseCounts = counts,
                     routineExerciseNames = names,
+                    routineEstimatedMinutes = estimatedMinutes,
                     isLoading = false
                 )
             }
         }
+    }
+
+    private fun estimateWorkoutMinutes(totalSets: Int): Int {
+        if (totalSets == 0) return 0
+        val seconds = totalSets * 52 + (totalSets - 1) * 90
+        return maxOf(1, (seconds + 59) / 60)
     }
 
     private fun loadExerciseLibrary() {
