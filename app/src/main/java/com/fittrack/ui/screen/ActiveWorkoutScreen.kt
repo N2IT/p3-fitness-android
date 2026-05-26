@@ -9,8 +9,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fittrack.data.entity.Exercise
 import com.fittrack.ui.components.*
 import com.fittrack.ui.theme.*
 import com.fittrack.ui.viewmodel.ActiveWorkoutUiState
@@ -31,6 +34,7 @@ import com.fittrack.ui.viewmodel.InputMode
 import com.fittrack.ui.viewmodel.WorkoutExerciseState
 import com.fittrack.ui.viewmodel.WorkoutSet
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActiveWorkoutScreen(
     uiState: ActiveWorkoutUiState,
@@ -48,6 +52,7 @@ fun ActiveWorkoutScreen(
     onDiscard: () -> Unit
 ) {
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var howToExercise by remember { mutableStateOf<Exercise?>(null) }
 
     GradientBackground {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -82,7 +87,8 @@ fun ActiveWorkoutScreen(
                         onUpdateWeight = { setIndex, weight -> onUpdateWeight(exerciseIndex, setIndex, weight) },
                         onUpdateReps = { setIndex, reps -> onUpdateReps(exerciseIndex, setIndex, reps) },
                         onAddSet = { onAddSet(exerciseIndex) },
-                        onRemoveSet = { setIndex -> onRemoveSet(exerciseIndex, setIndex) }
+                        onRemoveSet = { setIndex -> onRemoveSet(exerciseIndex, setIndex) },
+                        onShowHowTo = { howToExercise = exerciseState.exercise }
                     )
                 }
                 item { Spacer(Modifier.height(100.dp)) }
@@ -141,6 +147,54 @@ fun ActiveWorkoutScreen(
             titleContentColor = TextPrimary,
             textContentColor = TextSecondary
         )
+    }
+
+    howToExercise?.let { exercise ->
+        ModalBottomSheet(
+            onDismissRequest = { howToExercise = null },
+            containerColor = DarkSurface,
+            contentColor = TextPrimary
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = exercise.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Spacer(Modifier.height(6.dp))
+                Row {
+                    EquipmentBadge(exercise.equipment)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        exercise.muscleGroup,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextTertiary
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                if (exercise.description.isNotBlank()) {
+                    Text(
+                        text = exercise.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+                    )
+                } else {
+                    Text(
+                        text = "No description available for this exercise.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextTertiary
+                    )
+                }
+            }
+        }
     }
 
     // PR celebration overlay
@@ -248,16 +302,34 @@ private fun ExerciseCard(
     onUpdateWeight: (Int, String) -> Unit,
     onUpdateReps: (Int, String) -> Unit,
     onAddSet: () -> Unit,
-    onRemoveSet: (Int) -> Unit
+    onRemoveSet: (Int) -> Unit,
+    onShowHowTo: () -> Unit
 ) {
     FitTrackCard {
-        // Exercise name
-        Text(
-            text = exerciseState.exercise.name,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-        )
+        // Exercise name + how-to button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = exerciseState.exercise.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = onShowHowTo,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "How to",
+                    tint = ElectricBlue.copy(alpha = 0.7f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
 
         Spacer(Modifier.height(4.dp))
 

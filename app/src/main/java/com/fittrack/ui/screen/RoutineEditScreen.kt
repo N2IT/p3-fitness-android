@@ -318,6 +318,65 @@ private fun StepperField(
 }
 
 @Composable
+private fun ExercisePickerRow(
+    exercise: com.fittrack.data.entity.Exercise,
+    onExercisePicked: (com.fittrack.data.entity.Exercise) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .animateContentSize()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onExercisePicked(exercise) }
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    exercise.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = TextPrimary
+                )
+                Text(
+                    exercise.muscleGroup,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextTertiary
+                )
+            }
+            EquipmentBadge(exercise.equipment)
+            if (exercise.description.isNotBlank()) {
+                Spacer(Modifier.width(4.dp))
+                IconButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.Info,
+                        contentDescription = if (expanded) "Hide description" else "How to",
+                        tint = ElectricBlue.copy(alpha = 0.6f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+        if (expanded && exercise.description.isNotBlank()) {
+            Text(
+                text = exercise.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun ExercisePickerContent(
     exercises: List<com.fittrack.data.entity.Exercise>,
     muscleGroups: List<String>,
@@ -383,28 +442,10 @@ private fun ExercisePickerContent(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             items(exercises, key = { it.id }) { exercise ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onExercisePicked(exercise) }
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            exercise.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = TextPrimary
-                        )
-                        Text(
-                            exercise.muscleGroup,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextTertiary
-                        )
-                    }
-                    EquipmentBadge(exercise.equipment)
-                }
+                ExercisePickerRow(
+                    exercise = exercise,
+                    onExercisePicked = onExercisePicked
+                )
             }
         }
 
