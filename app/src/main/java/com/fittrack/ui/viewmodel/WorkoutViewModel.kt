@@ -1,5 +1,6 @@
 package com.fittrack.ui.viewmodel
 
+import androidx.room.withTransaction
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -314,8 +315,10 @@ class WorkoutViewModel(
             }
 
             if (logs.isNotEmpty()) {
-                exerciseLogDao.insertAll(logs)
-                routineDao.markPerformed(routineId)
+                db.withTransaction {
+                    exerciseLogDao.insertAll(logs)
+                    routineDao.markPerformed(routineId)
+                }
             }
 
             _uiState.value = _uiState.value.copy(isFinishing = false, isFinished = true)

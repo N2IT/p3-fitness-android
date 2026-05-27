@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -72,6 +74,23 @@ fun FitTrackApp() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val showBottomNav = currentRoute in bottomNavRoutes
+
+    // If the DB was wiped (e.g. destructive migration) while a session was saved,
+    // the stored userId won't exist. Detect that and send back to login.
+    LaunchedEffect(Unit) {
+        if (savedUserId != -1) {
+            val userExists = withContext(Dispatchers.IO) {
+                app.database.userDao().getUserById(savedUserId) != null
+            }
+            if (!userExists) {
+                app.sessionManager.clearSession()
+                currentUserId = -1
+                navController.navigate(NavRoutes.LOGIN) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        }
+    }
 
     Scaffold(
         containerColor = DarkBackground,
