@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -85,7 +86,7 @@ fun SettingsScreen(
                             }
                             TextButton(onClick = { showSignOutDialog = true }) {
                                 Icon(
-                                    Icons.Default.Logout,
+                                    Icons.AutoMirrored.Filled.Logout,
                                     contentDescription = "Sign Out",
                                     tint = TextTertiary,
                                     modifier = Modifier.size(18.dp)
