@@ -174,7 +174,10 @@ fun FitTrackApp() {
             // === ROUTINE LIST ===
             composable(NavRoutes.ROUTINE_LIST) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: RoutineViewModel = viewModel(factory = RoutineViewModel.Factory(app, currentUserId))
+                val vm: RoutineViewModel = viewModel(
+                    key = "routines_$currentUserId",
+                    factory = RoutineViewModel.Factory(app, currentUserId)
+                )
                 val listState by vm.listState.collectAsState()
 
                 RoutineListScreen(
@@ -284,7 +287,10 @@ fun FitTrackApp() {
             // === HISTORY ===
             composable(NavRoutes.HISTORY) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory(app, currentUserId))
+                val vm: HistoryViewModel = viewModel(
+                    key = "history_$currentUserId",
+                    factory = HistoryViewModel.Factory(app, currentUserId)
+                )
                 val historyState by vm.historyState.collectAsState()
 
                 HistoryScreen(
@@ -315,7 +321,10 @@ fun FitTrackApp() {
             // === PROGRESS ===
             composable(NavRoutes.PROGRESS) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: ProgressViewModel = viewModel(factory = ProgressViewModel.Factory(app, currentUserId))
+                val vm: ProgressViewModel = viewModel(
+                    key = "progress_$currentUserId",
+                    factory = ProgressViewModel.Factory(app, currentUserId)
+                )
                 val progressState by vm.progressState.collectAsState()
 
                 ProgressScreen(
@@ -368,7 +377,10 @@ fun FitTrackApp() {
             // === SETTINGS ===
             composable(NavRoutes.SETTINGS) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(app, currentUserId))
+                val vm: SettingsViewModel = viewModel(
+                    key = "settings_$currentUserId",
+                    factory = SettingsViewModel.Factory(app, currentUserId)
+                )
                 val uiState by vm.uiState.collectAsState()
 
                 SettingsScreen(
@@ -394,7 +406,10 @@ fun FitTrackApp() {
             // === ACHIEVEMENTS ===
             composable(NavRoutes.ACHIEVEMENTS) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(app, currentUserId))
+                val vm: SettingsViewModel = viewModel(
+                    key = "settings_$currentUserId",
+                    factory = SettingsViewModel.Factory(app, currentUserId)
+                )
                 val uiState by vm.uiState.collectAsState()
 
                 AchievementsScreen(
