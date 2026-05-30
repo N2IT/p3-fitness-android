@@ -28,6 +28,7 @@ import com.fittrack.data.entity.WorkoutRoutine
 import com.fittrack.ui.components.*
 import com.fittrack.ui.theme.*
 import com.fittrack.ui.viewmodel.RoutineListUiState
+import androidx.compose.material.icons.filled.Schedule
 
 @Composable
 fun RoutineListScreen(
@@ -131,6 +132,7 @@ fun RoutineListScreen(
                                 routine = routine,
                                 exerciseCount = uiState.routineExerciseCounts[routine.id] ?: 0,
                                 exerciseNames = uiState.routineExerciseNames[routine.id] ?: emptyList(),
+                                estimatedMinutes = uiState.routineEstimatedMinutes[routine.id] ?: 0,
                                 onEdit = { onEditRoutine(routine.id) },
                                 onStart = { onStartWorkout(routine.id) },
                                 onDelete = { deleteTarget = routine }
@@ -174,6 +176,7 @@ private fun RoutineCard(
     routine: WorkoutRoutine,
     exerciseCount: Int,
     exerciseNames: List<String>,
+    estimatedMinutes: Int,
     onEdit: () -> Unit,
     onStart: () -> Unit,
     onDelete: () -> Unit
@@ -203,11 +206,30 @@ private fun RoutineCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "$exerciseCount exercises",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "$exerciseCount exercise${if (exerciseCount != 1) "s" else ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    if (estimatedMinutes > 0) {
+                        Text("·", style = MaterialTheme.typography.bodySmall, color = TextTertiary)
+                        Icon(
+                            Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = TextTertiary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "~${estimatedMinutes} min",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextTertiary
+                        )
+                    }
+                }
                 if (exerciseNames.isNotEmpty()) {
                     Text(
                         text = exerciseNames.joinToString(" · "),

@@ -1,5 +1,6 @@
 package com.fittrack.ui.viewmodel
 
+import androidx.room.withTransaction
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -295,8 +296,16 @@ class WorkoutViewModel(
             val state = _uiState.value
             val logs = mutableListOf<ExerciseLog>()
 
+            val anyCompleted = state.exercises.any { ex -> ex.sets.any { it.isCompleted } }
+
             state.exercises.forEach { exerciseState ->
-                exerciseState.sets.filter { it.isCompleted }.forEach { set ->
+                val setsToLog = if (anyCompleted) {
+                    exerciseState.sets.filter { it.isCompleted }
+                } else {
+                    // User pressed Finish without ticking any sets — log all sets with data
+                    exerciseState.sets.filter { it.weight.isNotBlank() && it.reps.isNotBlank() }
+                }
+                setsToLog.forEach { set ->
                     val weight = set.weight.toDoubleOrNull() ?: 0.0
                     val reps = set.reps.toIntOrNull() ?: 0
                     logs.add(
@@ -314,8 +323,10 @@ class WorkoutViewModel(
             }
 
             if (logs.isNotEmpty()) {
-                exerciseLogDao.insertAll(logs)
-                routineDao.markPerformed(routineId)
+                db.withTransaction {
+                    exerciseLogDao.insertAll(logs)
+                    routineDao.markPerformed(routineId)
+                }
             }
 
             _uiState.value = _uiState.value.copy(isFinishing = false, isFinished = true)

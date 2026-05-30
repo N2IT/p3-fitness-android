@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,7 +40,8 @@ fun SettingsScreen(
     onClearApiKey: () -> Unit,
     onExportData: () -> Unit,
     onNavigateToAchievements: () -> Unit,
-    onNavigateToBodyWeight: () -> Unit
+    onNavigateToBodyWeight: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
 
@@ -63,11 +65,13 @@ fun SettingsScreen(
             ) {
                 // Profile section
                 item {
+                    var showSignOutDialog by remember { mutableStateOf(false) }
+
                     FitTrackCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Person, "Profile", tint = ElectricBlue, modifier = Modifier.size(40.dp))
                             Spacer(Modifier.width(12.dp))
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     uiState.username,
                                     style = MaterialTheme.typography.titleLarge,
@@ -80,7 +84,41 @@ fun SettingsScreen(
                                     color = TextSecondary
                                 )
                             }
+                            TextButton(onClick = { showSignOutDialog = true }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Logout,
+                                    contentDescription = "Sign Out",
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("Sign Out", color = TextTertiary, style = MaterialTheme.typography.labelMedium)
+                            }
                         }
+                    }
+
+                    if (showSignOutDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showSignOutDialog = false },
+                            title = { Text("Sign Out?") },
+                            text = { Text("Your data will be saved. Sign back in with the same username to access it.") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showSignOutDialog = false
+                                    onLogout()
+                                }) {
+                                    Text("Sign Out", color = ErrorRed)
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showSignOutDialog = false }) {
+                                    Text("Cancel")
+                                }
+                            },
+                            containerColor = DarkCard,
+                            titleContentColor = TextPrimary,
+                            textContentColor = TextSecondary
+                        )
                     }
                 }
 

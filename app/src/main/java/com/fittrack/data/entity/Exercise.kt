@@ -9,5 +9,6 @@ data class Exercise(
     val name: String,
     val muscleGroup: String,
     val equipment: String,
-    val isCustom: Boolean = false
+    val isCustom: Boolean = false,
+    val description: String = ""
 )

@@ -11,12 +11,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -64,11 +67,31 @@ val bottomNavRoutes = setOf(
 @Composable
 fun FitTrackApp() {
     val navController = rememberNavController()
-    var currentUserId by remember { mutableIntStateOf(-1) }
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
+    val savedUserId = remember { app.sessionManager.getUserId() }
+    var currentUserId by rememberSaveable { mutableIntStateOf(savedUserId) }
+    val startDestination = if (savedUserId != -1) NavRoutes.ROUTINE_LIST else NavRoutes.LOGIN
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
     val showBottomNav = currentRoute in bottomNavRoutes
+
+    // If the DB was wiped (e.g. destructive migration) while a session was saved,
+    // the stored userId won't exist. Detect that and send back to login.
+    LaunchedEffect(Unit) {
+        if (savedUserId != -1) {
+            val userExists = withContext(Dispatchers.IO) {
+                app.database.userDao().getUserById(savedUserId) != null
+            }
+            if (!userExists) {
+                app.sessionManager.clearSession()
+                currentUserId = -1
+                navController.navigate(NavRoutes.LOGIN) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        }
+    }
 
     Scaffold(
         containerColor = DarkBackground,
@@ -116,7 +139,7 @@ fun FitTrackApp() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = NavRoutes.LOGIN,
+            startDestination = startDestination,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -151,7 +174,10 @@ fun FitTrackApp() {
             // === ROUTINE LIST ===
             composable(NavRoutes.ROUTINE_LIST) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: RoutineViewModel = viewModel(factory = RoutineViewModel.Factory(app, currentUserId))
+                val vm: RoutineViewModel = viewModel(
+                    key = "routines_$currentUserId",
+                    factory = RoutineViewModel.Factory(app, currentUserId)
+                )
                 val listState by vm.listState.collectAsState()
 
                 RoutineListScreen(
@@ -261,7 +287,10 @@ fun FitTrackApp() {
             // === HISTORY ===
             composable(NavRoutes.HISTORY) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory(app, currentUserId))
+                val vm: HistoryViewModel = viewModel(
+                    key = "history_$currentUserId",
+                    factory = HistoryViewModel.Factory(app, currentUserId)
+                )
                 val historyState by vm.historyState.collectAsState()
 
                 HistoryScreen(
@@ -292,7 +321,10 @@ fun FitTrackApp() {
             // === PROGRESS ===
             composable(NavRoutes.PROGRESS) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: ProgressViewModel = viewModel(factory = ProgressViewModel.Factory(app, currentUserId))
+                val vm: ProgressViewModel = viewModel(
+                    key = "progress_$currentUserId",
+                    factory = ProgressViewModel.Factory(app, currentUserId)
+                )
                 val progressState by vm.progressState.collectAsState()
 
                 ProgressScreen(
@@ -345,7 +377,10 @@ fun FitTrackApp() {
             // === SETTINGS ===
             composable(NavRoutes.SETTINGS) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(app, currentUserId))
+                val vm: SettingsViewModel = viewModel(
+                    key = "settings_$currentUserId",
+                    factory = SettingsViewModel.Factory(app, currentUserId)
+                )
                 val uiState by vm.uiState.collectAsState()
 
                 SettingsScreen(
@@ -357,14 +392,24 @@ fun FitTrackApp() {
                     onClearApiKey = vm::clearApiKey,
                     onExportData = vm::exportData,
                     onNavigateToAchievements = { navController.navigate(NavRoutes.ACHIEVEMENTS) },
-                    onNavigateToBodyWeight = { navController.navigate(NavRoutes.BODY_WEIGHT) }
+                    onNavigateToBodyWeight = { navController.navigate(NavRoutes.BODY_WEIGHT) },
+                    onLogout = {
+                        vm.logout()
+                        currentUserId = -1
+                        navController.navigate(NavRoutes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
 
             // === ACHIEVEMENTS ===
             composable(NavRoutes.ACHIEVEMENTS) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as FitTrackApplication
-                val vm: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(app, currentUserId))
+                val vm: SettingsViewModel = viewModel(
+                    key = "settings_$currentUserId",
+                    factory = SettingsViewModel.Factory(app, currentUserId)
+                )
                 val uiState by vm.uiState.collectAsState()
 
                 AchievementsScreen(
