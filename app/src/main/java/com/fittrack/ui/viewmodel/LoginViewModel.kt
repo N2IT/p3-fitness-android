@@ -63,7 +63,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     User(username = username, unitPreference = _uiState.value.unitPreference)
                 ).toInt()
             }
-            (application as com.fittrack.FitTrackApplication).sessionManager.saveUserId(userId)
+            getApplication<com.fittrack.FitTrackApplication>().sessionManager.saveUserId(userId)
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 loggedInUserId = userId
